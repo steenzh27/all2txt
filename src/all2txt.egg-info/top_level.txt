@@ -1,0 +1,2 @@
+all2txt
+all2txt_ocr_plugin

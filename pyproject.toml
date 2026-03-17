@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "all2txt"
+version = "0.1.0"
+description = "Universal text extraction from many document formats with external-tool fallbacks"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Steenzh" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Text Processing",
+]
+dependencies = []
+
+[project.optional-dependencies]
+pdf  = ["pypdf>=4.0.0"]
+win  = ["pywin32>=306"]
+ole  = ["olefile>=0.47"]
+mobi = ["mobi>=0.2.0"]
+msg  = ["extract-msg>=0.52.0"]
+ocr  = ["pypdf>=4.0.0"]
+all  = [
+  "pypdf>=4.0.0",
+  "pywin32>=306",
+  "olefile>=0.47",
+  "mobi>=0.2.0",
+  "extract-msg>=0.52.0"
+]
+
+[project.scripts]
+all2txt = "all2txt.cli:main"
+
+[project.entry-points."all2txt.extractors"]
+ocr_plugin = "all2txt_ocr_plugin:ocr_plugin"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

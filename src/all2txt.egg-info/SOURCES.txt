@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+src/all2txt/__init__.py
+src/all2txt/cli.py
+src/all2txt/core.py
+src/all2txt/extractors.py
+src/all2txt/models.py
+src/all2txt.egg-info/PKG-INFO
+src/all2txt.egg-info/SOURCES.txt
+src/all2txt.egg-info/dependency_links.txt
+src/all2txt.egg-info/entry_points.txt
+src/all2txt.egg-info/requires.txt
+src/all2txt.egg-info/top_level.txt
+src/all2txt_ocr_plugin/__init__.py
+tests/test_smoke.py

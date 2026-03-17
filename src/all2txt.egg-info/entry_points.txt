@@ -1,0 +1,5 @@
+[all2txt.extractors]
+ocr_plugin = all2txt_ocr_plugin:ocr_plugin
+
+[console_scripts]
+all2txt = all2txt.cli:main

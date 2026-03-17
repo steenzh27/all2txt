@@ -1,0 +1,666 @@
+Metadata-Version: 2.4
+Name: all2txt
+Version: 0.1.0
+Summary: Universal text extraction from many document formats with external-tool fallbacks
+Author: Steenzh
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Text Processing
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Provides-Extra: pdf
+Requires-Dist: pypdf>=4.0.0; extra == "pdf"
+Provides-Extra: win
+Requires-Dist: pywin32>=306; extra == "win"
+Provides-Extra: ole
+Requires-Dist: olefile>=0.47; extra == "ole"
+Provides-Extra: mobi
+Requires-Dist: mobi>=0.2.0; extra == "mobi"
+Provides-Extra: msg
+Requires-Dist: extract-msg>=0.52.0; extra == "msg"
+Provides-Extra: ocr
+Requires-Dist: pypdf>=4.0.0; extra == "ocr"
+Provides-Extra: all
+Requires-Dist: pypdf>=4.0.0; extra == "all"
+Requires-Dist: pywin32>=306; extra == "all"
+Requires-Dist: olefile>=0.47; extra == "all"
+Requires-Dist: mobi>=0.2.0; extra == "all"
+Requires-Dist: extract-msg>=0.52.0; extra == "all"
+
+﻿# all2txt
+
+`all2txt` is a Python library (and CLI) for extracting text from many document formats.
+
+Russian version: [README.ru.md](README.ru.md)
+
+It is designed for legacy and mixed corpora where files may come from Word, LibreOffice/OpenOffice, OLE-based formats, or plain text formats.
+
+## Features
+
+- Unified API to get text from a file as Python string
+- Save extracted text to `.txt` in a chosen output encoding
+- Return extended decode results with method, detected encoding, warnings, and metadata
+- **Native Python extractors (no extra deps):**
+  `.txt`, `.log`, `.ini`, `.conf`, `.tex`, `.bib`, `.strings`, `.md`, `.rst`, `.csv`, `.tsv`, `.json`,
+  `.xml`, `.html`, `.htm`, `.mht`, `.mhtml`, `.eml`, `.plist`, `.rtf`, `.docx`, `.odt`, `.ods`, `.xlsx`,
+  `.pptx`, `.fb2`, `.epub`, `.pages`, `.numbers`, `.key`
+- **Requires optional dep:**
+  `.pdf` - `pip install all2txt[pdf]`; `.mobi` - `pip install all2txt[mobi]`; `.msg` - `pip install all2txt[msg]`
+- **Supported via external converter:**
+  `.azw` and similar ebook formats are best handled through Calibre `ebook-convert`
+- **External-tool fallbacks (install separately):**
+  | Tool | Covers |
+  |------|--------|
+  | Microsoft Word (COM, Windows) | `.doc`, `.docx`, `.rtf`, `.odt` |
+  | LibreOffice / OpenOffice headless | Office formats, `.odt`, `.epub` |
+  | antiword | Old `.doc` |
+  | wvText | Old `.doc` (Linux/Unix) |
+  | catdoc/catppt/xls2csv | Legacy `.doc`/`.ppt`/`.xls` |
+  | macOS `textutil` | Apple/macOS office and rich-text conversions |
+  | Calibre `ebook-convert` | `.epub`, `.mobi`, `.djvu`, `.azw`, `.fb2`, +100 formats |
+  | DjVuLibre `djvutxt` | `.djvu`, `.djv` |
+  | pstotext/ps2ascii | `.ps`, `.eps` |
+  | extract_chmLib/chm2txt | `.chm` |
+  | OLE stream scan | Legacy MS Office binaries `.doc`, `.xls`, `.ppt` |
+
+## Installation
+
+```bash
+# from PyPI
+pip install all2txt
+
+# local development install
+pip install -e .
+```
+
+### What gets installed by default
+
+`pip install all2txt` installs only the core package itself.
+
+Current base Python dependencies: none.
+
+This means the default install gives you:
+
+- the main Python API: `decode_file`, `decode_result`, `decode_to_txt`, `TextDecoder`
+- built-in extractors for plain text, markup, Office XML/ZIP-based formats, email-like formats, and several archive-like document containers
+- the CLI command `all2txt`
+- best-effort fallback logic including `python-bytes`
+- built-in plugin code shipped inside the package, including OCR plugin registration hooks
+
+This also means the default install does **not** automatically install:
+
+- `pypdf`
+- `pywin32`
+- `olefile`
+- `mobi`
+- `extract-msg`
+- external OS tools such as LibreOffice, Word, Calibre, Tesseract, DjVuLibre, antiword, catdoc, etc.
+
+Optional Python dependencies:
+
+```bash
+pip install -e .[all]
+# or separately:
+pip install -e .[pdf]   # PDF via pypdf
+pip install -e .[win]   # Word COM on Windows
+pip install -e .[ole]   # OLE binary fallback
+pip install -e .[mobi]  # MOBI native extractor
+pip install -e .[msg]   # Outlook .msg parsing
+pip install -e .[ocr]   # OCR-related Python helpers; OCR still needs external tools
+```
+
+If you install from PyPI instead of editable mode, the same extras look like this:
+
+```bash
+pip install all2txt[all]
+pip install all2txt[pdf]
+pip install all2txt[win]
+pip install all2txt[ole]
+pip install all2txt[mobi]
+pip install all2txt[msg]
+pip install all2txt[ocr]
+```
+
+### What each extra adds
+
+| Extra  | Installs                                             | What it enables                                                              |
+| ------ | ---------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `pdf`  | `pypdf`                                              | native PDF text extraction and PDF metadata                                  |
+| `win`  | `pywin32`                                            | Microsoft Word COM extraction on Windows                                     |
+| `ole`  | `olefile`                                            | OLE stream fallback for old `.doc/.xls/.ppt`                                 |
+| `mobi` | `mobi`                                               | native `.mobi` extraction                                                    |
+| `msg`  | `extract-msg`                                        | Outlook `.msg` parsing                                                       |
+| `ocr`  | `pypdf`                                              | OCR helper path for scanned PDF workflows; external OCR tools still required |
+| `all`  | `pypdf`, `pywin32`, `olefile`, `mobi`, `extract-msg` | most optional Python-side features in one install                            |
+
+Notes:
+
+- `all` already includes `pypdf`, so in practice it also covers the Python side of `ocr`
+- `ocr` does not install Tesseract, OCRmyPDF, Poppler, ImageMagick, or DjVu tools; those are system tools and must be installed separately
+- if a dependency is missing, the library tries to degrade gracefully and usually records warnings or falls back to another strategy
+
+External tools (install once on the OS):
+
+```bash
+# Calibre - covers EPUB, MOBI, DJVU, AZW, FB2 and 100+ formats
+# https://calibre-ebook.com/download
+
+# DjVuLibre - for .djvu files
+# Windows: https://djvu.sourceforge.net/  |  Linux: apt install djvulibre-bin
+```
+
+### Recommended installation patterns
+
+Minimal install:
+
+```bash
+pip install all2txt
+```
+
+One command for all optional Python dependencies:
+
+```bash
+pip install all2txt[all]
+```
+
+This is the shortest answer to "install everything that pip can install for this library".
+
+What it includes immediately:
+
+- `pypdf`
+- `pywin32`
+- `olefile`
+- `mobi`
+- `extract-msg`
+
+What it still does **not** include:
+
+- Microsoft Word
+- LibreOffice / OpenOffice
+- Calibre
+- Tesseract OCR
+- OCRmyPDF
+- Poppler
+- DjVuLibre
+- antiword / wvText / catdoc tools
+
+Those are external system tools and must be installed separately.
+
+Good default for Windows office-heavy corpora:
+
+```bash
+pip install all2txt[all]
+```
+
+If you mainly process old Cyrillic Office files on Windows, also ensure one of these is installed on the OS:
+
+- Microsoft Word
+- LibreOffice
+
+If you mainly process scanned PDF/DjVu/image files:
+
+```bash
+pip install all2txt[ocr]
+```
+
+and separately install OCR tools such as:
+
+- Tesseract OCR
+- OCRmyPDF
+- Poppler (`pdftoppm`)
+- DjVuLibre (`ddjvu` / `djvutxt`)
+- ImageMagick (`magick`)
+
+### How to add functionality later
+
+You can start with the minimal install and add only what you need.
+
+Examples:
+
+```bash
+# add PDF support later
+pip install all2txt[pdf]
+
+# add Outlook .msg support later
+pip install all2txt[msg]
+
+# add legacy OLE fallback later
+pip install all2txt[ole]
+
+# add everything Python-side later
+pip install all2txt[all]
+```
+
+To inspect what is currently available in your environment, run:
+
+```bash
+all2txt --available
+```
+
+It will show:
+
+- which extras are effectively available
+- which external tools were found in `PATH`
+- which format groups are currently available at native, tool, OCR, or fallback level
+- suggested installation commands for missing pieces
+
+### Format install matrix
+
+| Format group                                                                                               | Works after `pip install all2txt`     | Better with Python extra                                     | Best with external tools                              |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------- |
+| `.txt .log .ini .conf .md .rst .csv .tsv .json .xml .html .htm .mht .mhtml .eml .plist .tex .bib .strings` | yes, native                           | not needed                                                   | not needed                                            |
+| `.docx .odt .ods .xlsx .pptx .fb2 .epub .pages .numbers .key`                                              | yes, native                           | not needed                                                   | optional, only for edge cases                         |
+| `.pdf`                                                                                                     | limited fallback only                 | `pip install all2txt[pdf]`                                   | for scanned PDFs add Tesseract / OCRmyPDF / Poppler   |
+| `.msg`                                                                                                     | limited fallback only                 | `pip install all2txt[msg]`                                   | usually not needed                                    |
+| `.mobi`                                                                                                    | limited fallback only                 | `pip install all2txt[mobi]`                                  | Calibre can improve coverage                          |
+| `.azw` and similar ebooks                                                                                  | no true native parser                 | not applicable                                               | Calibre `ebook-convert`                               |
+| `.doc`                                                                                                     | best-effort fallback only             | `pip install all2txt[win]` and/or `pip install all2txt[ole]` | Microsoft Word, LibreOffice, antiword, wvText, catdoc |
+| `.xls`                                                                                                     | best-effort fallback only             | `pip install all2txt[ole]`                                   | LibreOffice, xls2csv                                  |
+| `.ppt`                                                                                                     | best-effort fallback only             | `pip install all2txt[ole]`                                   | LibreOffice, catppt                                   |
+| `.djvu .djv`                                                                                               | limited fallback only                 | no dedicated Python extra                                    | DjVuLibre, Calibre, or OCR tools                      |
+| `.ps .eps`                                                                                                 | limited fallback only                 | no dedicated Python extra                                    | pstotext / ps2ascii                                   |
+| `.chm`                                                                                                     | limited fallback only                 | no dedicated Python extra                                    | extract_chmLib / chm2txt                              |
+| scanned images / scanned PDFs                                                                              | placeholder or fallback behavior only | `pip install all2txt[ocr]` helps on Python side              | Tesseract, OCRmyPDF, Poppler, DjVuLibre, ImageMagick  |
+
+Practical recommendation:
+
+- for most users start with `pip install all2txt[all]`
+- for Office-heavy Windows corpora also install Microsoft Word or LibreOffice
+- for scanned documents also install OCR tools
+- if you are unsure, run `all2txt --available`
+
+## Python usage
+
+For most code and notebook scenarios there are 4 entry points to remember:
+
+- `decode_file(path)` -> returns only text as `str`
+- `decode_result(path)` -> returns `DecodeResult` with text, metadata and warnings
+- `decode_to_txt(path, out_path)` -> writes extracted text to a `.txt` file
+- `TextDecoder(...)` -> reusable decoder with shared settings for many files
+
+### Quick start
+
+```python
+from all2txt import TextDecoder, decode_file, decode_result, decode_to_txt
+
+text = decode_file("sample.docx")
+
+decoder = TextDecoder(
+  preferred_tools=["word", "libreoffice", "ole"],
+  encoding="cp1251",
+  fallback_encodings=["koi8-r", "cp866"],
+  output_encoding="cp1251",
+)
+
+result = decoder.decode_result("legacy.doc")
+text_only = decoder.decode_file("legacy.doc")
+print(result.used_method)
+print(result.detected_encoding)
+print(result.metadata)
+
+decode_to_txt(
+  "legacy.doc",
+  "out/legacy.txt",
+  preferred_tools=["word", "libreoffice", "ole"],
+  encoding="cp1251",
+  fallback_encodings=["koi8-r", "cp866"],
+  output_encoding="cp1251",
+)
+```
+
+Important:
+
+- `decode_file(path)` is the shortest API, but it only accepts `preferred_tools`
+- if you need `encoding`, `fallback_encodings`, or `output_encoding`, use `decode_result(...)`, `decode_to_txt(...)`, or `TextDecoder(...)`
+
+### Which function to use
+
+| Function                   | Returns                 | When useful                                             |
+| -------------------------- | ----------------------- | ------------------------------------------------------- |
+| `decode_file(path)`        | `str`                   | You only need the extracted text                        |
+| `decode_result(path)`      | `DecodeResult`          | You want text + method + encoding + metadata + warnings |
+| `decode_to_txt(path, out)` | `Path`                  | You want to convert files into `.txt` on disk           |
+| `TextDecoder(...)`         | reusable decoder object | You process many files with the same settings           |
+
+### `decode_result(...)` example
+
+```python
+from all2txt import decode_result
+
+res = decode_result(
+  "data/legacy.doc",
+  encoding="utf-8",
+  fallback_encodings=["cp1251", "koi8-r", "cp866"],
+)
+
+print(type(res).__name__)
+print(res.text[:500])
+print(res.used_method)
+print(res.source_format)
+print(res.detected_encoding)
+print(res.metadata)
+print(res.warnings)
+```
+
+### Jupyter Notebook / pandas example
+
+If you work in `.ipynb`, the most practical pattern is: one document = one row in a DataFrame.
+
+```python
+from pathlib import Path
+import pandas as pd
+from all2txt import TextDecoder
+
+root = Path("docs")
+
+decoder = TextDecoder(
+  preferred_tools=["word", "libreoffice", "antiword", "ole", "strings"],
+  encoding="utf-8",
+  fallback_encodings=["cp1251", "koi8-r", "cp866"],
+)
+
+extensions = {
+  ".txt", ".doc", ".docx", ".rtf", ".pdf",
+  ".xls", ".xlsx", ".ppt", ".pptx",
+  ".odt", ".ods", ".epub", ".fb2", ".mobi",
+  ".html", ".xml", ".json", ".csv", ".tsv",
+  ".eml", ".msg", ".djvu", ".djv", ".chm",
+}
+
+rows = []
+
+for path in root.rglob("*"):
+  if not path.is_file() or path.suffix.lower() not in extensions:
+    continue
+
+  try:
+    res = decoder.decode_result(path)
+    rows.append({
+      "path": str(path),
+      "file_name": path.name,
+      "ext": path.suffix.lower(),
+      "text": res.text,
+      "chars": len(res.text),
+      "used_method": res.used_method,
+      "encoding": res.detected_encoding,
+      "language": res.metadata.get("language"),
+      "title": res.metadata.get("title"),
+      "author": res.metadata.get("author"),
+      "warnings": res.warnings,
+      "status": "ok",
+      "error": "",
+    })
+  except Exception as exc:
+    rows.append({
+      "path": str(path),
+      "file_name": path.name,
+      "ext": path.suffix.lower(),
+      "text": "",
+      "chars": 0,
+      "used_method": "",
+      "encoding": "",
+      "language": None,
+      "title": None,
+      "author": None,
+      "warnings": [],
+      "status": "failed",
+      "error": str(exc),
+    })
+
+df = pd.DataFrame(rows)
+df_ok = df[(df["status"] == "ok") & (df["text"].str.len() > 0)].copy()
+```
+
+This makes it easy to:
+
+- build a text corpus for ML or embedding pipelines
+- filter documents by extraction method or language
+- inspect failed files separately
+- keep warnings for later quality control
+
+### Error handling example
+
+```python
+from all2txt import TextDecoder, ExtractorError
+
+decoder = TextDecoder(encoding="utf-8", fallback_encodings=["cp1251", "koi8-r"])
+
+try:
+  result = decoder.decode_result("docs/problematic.doc")
+  print(result.text[:300])
+  print(result.warnings)
+except FileNotFoundError:
+  print("File does not exist")
+except ExtractorError as exc:
+  print("Extraction failed:", exc)
+```
+
+### Save extracted corpus as TXT files
+
+```python
+from pathlib import Path
+from all2txt import decode_to_txt
+
+src_dir = Path("docs")
+out_dir = Path("decoded_txt")
+
+for src in src_dir.rglob("*.doc"):
+  dst = out_dir / src.with_suffix(".txt").name
+  decode_to_txt(src, dst)
+```
+
+## Metadata
+
+`decode_result(...)` returns a `DecodeResult` object with:
+
+- `text`
+- `used_method`
+- `source_format`
+- `detected_encoding`
+- `warnings`
+- `metadata`
+
+Metadata is best-effort and may include:
+
+- `title`
+- `author`
+- `date`
+- `language`
+- `page_count`
+- `subject`, `from`, `to` for email-like formats
+- source path, file name, format and file size
+
+## CLI usage
+
+```bash
+# Single file
+all2txt input.doc -o output.txt
+
+# Show what is available in the current environment
+all2txt --available
+
+# Directory batch
+all2txt ./docs -o ./decoded --glob "*.doc*"
+
+# Keep directory structure and write a CSV report
+all2txt ./docs -o ./decoded --keep-structure --report report.csv
+
+# Retry only files without output yet
+all2txt ./docs -o ./decoded --failed-only
+
+# Show what would happen without writing files
+all2txt ./docs --dry-run --glob "*.doc*"
+
+# Set preferred fallback order
+all2txt input.doc --method-order word libreoffice ole
+
+# Control encodings
+all2txt input.txt -o output.txt --input-encoding cp1251 --fallback-encodings koi8-r cp866 --output-encoding cp1251
+```
+
+CLI options of interest:
+
+- `--available` / `--doctor` / `--help-env`
+- `--dry-run`
+- `--report report.csv`
+- `--failed-only`
+- `--keep-structure`
+- `--method-order ...`
+- `--input-encoding ...`
+- `--fallback-encodings ...`
+- `--output-encoding ...`
+
+`--report report.csv` writes one row per processed file and includes fields such as:
+
+- `status`
+- `used_method`
+- `encoding`
+- `chars`
+- `metadata_json`
+- `warnings`
+- `warnings_json`
+
+## Plugins
+
+External packages can register custom extractors through the entry point group `all2txt.extractors`.
+The loaded object should be callable and expose a `suffixes` attribute.
+
+Built-in optional plugin included in this package:
+
+- `ocr_plugin` for `.pdf`, `.djvu`, `.djv` and image formats
+- It tries OCR tools in a soft-fallback mode and does not break standard extraction if OCR is unavailable
+- For pure image files without OCR tools, it returns a best-effort placeholder text with warnings instead of crashing
+- Typical external OCR tools are `tesseract`, `ocrmypdf`, `pdftoppm`, `ddjvu`, or `magick` depending on file type
+
+Minimal example:
+
+```python
+from all2txt import register_extractor
+
+def extract_custom(path, default_encoding, fallback_encodings=None):
+  return path.read_text(encoding=default_encoding)
+
+register_extractor(".custom", extract_custom)
+```
+
+Useful when you have:
+
+- internal corporate formats
+- pre-cleaned text containers
+- custom archive wrappers
+- files that need a project-specific parser before standard NLP processing
+
+### Publish a plugin to PyPI
+
+If you want to extend all2txt without changing the core package, publish a separate plugin package.
+
+Suggested package name pattern:
+
+- all2txt-yourformat
+
+Minimal package structure:
+
+- src/all2txt_yourformat/**init**.py
+- src/all2txt_yourformat/plugin.py
+- pyproject.toml
+
+Example plugin code (plugin.py):
+
+```python
+from pathlib import Path
+
+
+def yourformat_extractor(path: Path, default_encoding="utf-8", fallback_encodings=None):
+  return path.read_text(encoding=default_encoding, errors="replace")
+
+
+yourformat_extractor.suffixes = [".yourfmt"]
+```
+
+Minimal pyproject.toml for plugin package:
+
+```toml
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "all2txt-yourformat"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = ["all2txt>=0.1.0"]
+
+[project.entry-points."all2txt.extractors"]
+yourformat = "all2txt_yourformat.plugin:yourformat_extractor"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+```
+
+How to publish:
+
+```bash
+python -m pip install --upgrade build twine
+python -m build
+python -m twine upload dist/*
+```
+
+How users install your plugin:
+
+```bash
+pip install all2txt-yourformat
+```
+
+How users verify plugin activation:
+
+- run all2txt --available
+- decode a test file with .yourfmt extension
+- check used_method in decode_result(...)
+
+Why this is important:
+
+- no need to fork or modify all2txt core
+- independent release cycle per format
+- easy team ownership for domain-specific formats
+
+## How fallback works
+
+The library first tries native Python extractors for known formats.
+If extraction fails or text is empty, it tries external tools in order.
+Default order:
+
+1. `word`
+2. `libreoffice`
+3. `openoffice`
+4. `antiword`
+5. `wvtext`
+6. `catdoc`
+7. `textutil`
+8. `calibre`
+9. `djvutxt`
+10. `pstotext`
+11. `chm`
+12. `ole`
+13. `strings`
+
+For `.djvu` specifically - `djvutxt`, `calibre`, or OCR plugin routes may help depending on the file;
+for `.mobi` - native extractor requires `pip install all2txt[mobi]`, then `calibre` fallback;
+for unsupported or partially supported binaries, the library can still fall back to `python-bytes` best-effort recovery.
+
+## Notes
+
+- For old `.doc` files, best quality is usually from Word COM or LibreOffice.
+- For legacy text corpora, pass explicit `encoding` and `fallback_encodings` to improve old Cyrillic file decoding.
+- `output_encoding` allows saving extracted text back to an older target encoding when needed.
+- OCR is implemented as a separate plugin layer: if OCR tooling is missing, the main decoder still continues with non-OCR fallbacks.
+- The core now includes a Python-only binary text recovery fallback (`python-bytes`) so decoding remains available even without external office/OCR tools.
+- OLE mode is a best-effort fallback and may include noisy text.
+- EPUB extraction follows the OPF spine order (reading order), falling back to alphabetic.
+- iWork extraction first tries macOS `textutil`, then falls back to package parsing and printable-string recovery from `.iwa` chunks.
+- For scanned PDFs/DJVU, OCR is required (not included in this version; see Tesseract).
