@@ -780,8 +780,12 @@ def _read_docx(path: Path, _default_encoding: str) -> str:
         xml = zf.read("word/document.xml")
     root = ET.fromstring(xml)
     ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
-    texts = [node.text or "" for node in root.findall(".//w:t", ns)]
-    return " ".join(texts)
+    paragraphs = []
+    for par in root.findall(".//w:p", ns):
+        texts = [node.text or "" for node in par.findall(".//w:t", ns)]
+        paragraph_text = "".join(texts)
+        paragraphs.append(paragraph_text)
+    return "\n".join(paragraphs)
 
 
 def _read_odt(path: Path, _default_encoding: str) -> str:
